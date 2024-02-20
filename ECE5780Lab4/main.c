@@ -40,7 +40,9 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
+volatile int status;
+volatile char data; 
+volatile char prevdata;
 /* USER CODE BEGIN PV */
 /* USER CODE END PV */
 
@@ -56,8 +58,10 @@ void Transmit_Character(char value)
 {
 	while (1)
   {
+		//extract status value 
 		unsigned int status = USART3->ISR;
 		status &= USART_ISR_TXE; //check transmission end flag 
+		//if tranmission is exited, then send value into it
 		if(status != 0) 	
 		{
 			USART3->TDR = value;
@@ -65,7 +69,9 @@ void Transmit_Character(char value)
 		}
   }
 }
-
+/**
+*   Traverses a string till the NULL character of a string and transmits it through the TDR register 
+*/
 void Transmit_String(char* string)
 {
 	int i = 0;
@@ -103,6 +109,7 @@ int main(void)
 	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
   RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
 	
+	//Setup Alternate functions Output of PC10 and PC11
 	GPIOC->MODER |= (1 << 23);
 	GPIOC->MODER &= ~(1 << 22);
 	GPIOC->MODER |= (1 << 21);
@@ -119,13 +126,14 @@ int main(void)
 	GPIOC->AFR[1] |= (1 << 8);
 	
 	//Enable USART 3 
-	USART3->CR1 |= (1 << 3);
-	USART3->CR1 |= (1 << 2);
-	USART3->CR1 |= (1 << 0);
+	USART3->CR1 |= (1 << 5); //RXNE interrupt enable
+	USART3->CR1 |= (1 << 3); //Transmitter Enable
+	USART3->CR1 |= (1 << 2); //Receiver Enable
+	USART3->CR1 |= (1 << 0); // USART Enable 
 	USART3->BRR |= HAL_RCC_GetHCLKFreq() / 9600; // get baud rate of 115200
 	//Setup LEDS
 	
-	//General Purpose Output Mode 
+	//General Purpose Output Mode for PC6-9 LEDS
 	GPIOC->MODER &= ~(1 << 19);	
 	GPIOC->MODER |= (1 << 18);
 	GPIOC->MODER &= ~(1 << 17);
@@ -134,19 +142,20 @@ int main(void)
 	GPIOC->MODER |= (1 << 14);	
 	GPIOC->MODER &= ~(1 << 13);
 	GPIOC->MODER |= (1 << 12);
-	//Set LEDS to Push-Pull
+	
+	//Set LEDS to Push-Pull PC6-9
 	GPIOC->OTYPER &= ~(1 << 9);
 	GPIOC->OTYPER &= ~(1 << 8);
 	GPIOC->OTYPER &= ~(1 << 7);
 	GPIOC->OTYPER &= ~(1 << 6);
-	
-	//Set LEDS to LowSpeed 
+	 
+	//Set LEDS to LowSpeed PC6-9
 	GPIOC->OSPEEDR &= ~(1 << 18);
 	GPIOC->OSPEEDR &= ~(1 << 16);
 	GPIOC->OSPEEDR &= ~(1 << 14);
 	GPIOC->OSPEEDR &= ~(1 << 12);
 	
-	//Set LEDS to No pull up/down Resistor
+	//Set LEDS to No pull up/down Resistor PC6-9
 	GPIOC->PUPDR &= ~(1 << 19);
 	GPIOC->PUPDR &= ~(1 << 18);
 	GPIOC->PUPDR &= ~(1 << 17);
@@ -155,10 +164,18 @@ int main(void)
 	GPIOC->PUPDR &= ~(1 << 14);
 	GPIOC->PUPDR &= ~(1 << 13);
 	GPIOC->PUPDR &= ~(1 << 12);
+	
+	//Set LEDs to  off  PC6-9
 	GPIOC->ODR &= ~(1 << 6);
 	GPIOC->ODR &= ~(1 << 7);
 	GPIOC->ODR &= ~(1 << 8);
 	GPIOC->ODR &= ~(1 << 9);
+	
+	//Enable Interupt for Section 4.2
+	NVIC_EnableIRQ(USART3_4_IRQn);
+	//Set priority Level
+	NVIC_SetPriority(USART3_4_IRQn, 1);
+	
 	//Test Transmit Strings 
 //	int x = 0;
 //	char  string[] = {'a', 'b', 'c', 'd', 'e'};
@@ -169,29 +186,151 @@ int main(void)
 //			Transmit_String(string);
 //  } 
 
+//	Section 4.1 
+//	while(1)
+//	{
+//		char errorMsg[] = {'e', 'r', 'r', 'o', 'r', NULL};
+//		//if we data is read to be read 
+//		if((USART3->ISR & USART_ISR_RXNE) != 0)
+//		{
+//			char value = USART3->RDR & 0xFF;
+//			switch(value){
+//				case 'r':
+//					GPIOC->ODR ^= (1 << 6);
+//					break;
+//				case 'b':
+//					GPIOC->ODR ^= (1 << 7);
+//					break;
+//				case 'g':
+//					GPIOC->ODR ^= (1 << 9);
+//					break;
+//				case 'o':
+//					GPIOC->ODR ^= (1 << 8);
+//					break;
+//				default:
+//					Transmit_String(errorMsg);
+//				}		
+//		}
+//	}
+	//CMD prompt
+	Transmit_String("CMD?");
+	//Setup inital status flag
+	status = 0;
+	//create error message
+	char errorMsg[] = "\rError\r\n";
+	
 	while(1)
 	{
-		char errorMsg[] = {'e', 'r', 'r', 'o', 'r', NULL};
-		//if we data is read to be read 
-		if((USART3->ISR & USART_ISR_RXNE) != 0)
+		if(status == 1)
 		{
-			char value = USART3->RDR & 0xFF;
-			switch(value){
-				case 'r':
-					GPIOC->ODR ^= (1 << 6);
+			Transmit_Character(data); // Display Command Characters
+			
+			switch(data){
+				//Turn Off 
+				case '0':
+					switch(prevdata){
+						//Turn off Red
+						case 'r':
+							GPIOC->ODR &= ~(1 << 6);
+							Transmit_String("\nTurn off Red\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Turn off Blue
+						case 'b':
+							GPIOC->ODR &= ~(1 << 7);
+							Transmit_String("\nTurn off Blue\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Turn off Green
+						case 'g':
+							GPIOC->ODR &= ~(1 << 9);
+							Transmit_String("\nTurn off Green\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Turn off Orange
+						case 'o':
+							GPIOC->ODR &= ~(1 << 8);
+							Transmit_String("\nTurn off Orange\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Error
+						default: 
+							Transmit_String(errorMsg);
+					}
 					break;
-				case 'b':
-					GPIOC->ODR ^= (1 << 7);
+				case '1':
+					switch(prevdata)
+					{	
+						//Turn on Red
+						case 'r':
+							GPIOC->ODR |= (1 << 6);
+							Transmit_String("\nTurn on Red\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Turn on Blue
+						case 'b':
+							GPIOC->ODR |= (1 << 7);
+							Transmit_String("\nTurn on Blue\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Turn on Green
+						case 'g':
+							GPIOC->ODR |= (1 << 9);
+							Transmit_String("\nTurn on Green\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Turn on Orange
+						case 'o':
+							GPIOC->ODR |= (1 << 8);
+							Transmit_String("\nTurn on Orange\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Error
+						default: 
+							Transmit_String(errorMsg);
+					}
 					break;
-				case 'g':
-					GPIOC->ODR ^= (1 << 9);
+				//Toggle
+				case '2':
+					switch(prevdata)
+					{	
+						//Toggle Red
+						case 'r':
+							GPIOC->ODR ^= (1 << 6);
+							Transmit_String("\nToggled Red\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Toggle Blue
+						case 'b':
+							GPIOC->ODR ^= (1 << 7);
+							Transmit_String("\nToggled Blue\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Toggle Green
+						case 'g':
+							GPIOC->ODR ^= (1 << 9);
+							Transmit_String("\nToggled Green\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Toggle Orange
+						case 'o':
+							GPIOC->ODR ^= (1 << 8);
+							Transmit_String("\nToggled Orange\r\n");
+							Transmit_String("CMD?\r\n");
+							break;
+						//Error
+						default: 
+							Transmit_String(errorMsg);
+					}
 					break;
-				case 'o':
-					GPIOC->ODR ^= (1 << 8);
-					break;
-				default:
-					Transmit_String(errorMsg);
-				}		
+				default: 
+					if((data == 'r' || data == 'g' || data == 'b' || data == 'o'));
+				//if Data is not r, g, b, or o, it is an error 
+				else{
+						Transmit_String(errorMsg);
+				}
+			}
+			status = 0;
 		}
 	}
 }
@@ -232,7 +371,15 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void USART3_4_IRQHandler(void)
+{
+	//Store data and previous data
+	prevdata = data;
+	data = USART3->RDR;
+	//Set Status flag 
+	status = 1; 
+	
+}
 /* USER CODE END 4 */
 
 /**
