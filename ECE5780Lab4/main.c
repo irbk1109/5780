@@ -42,7 +42,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,7 +57,7 @@ void Transmit_Character(char value)
 	while (1)
   {
 		unsigned int status = USART3->ISR;
-		status &= (0x0040); //check transmission end flag 
+		status &= USART_ISR_TXE; //check transmission end flag 
 		if(status != 0) 	
 		{
 			USART3->TDR = value;
@@ -108,6 +107,7 @@ int main(void)
 	GPIOC->MODER &= ~(1 << 22);
 	GPIOC->MODER |= (1 << 21);
 	GPIOC->MODER &= ~(1 << 20);
+	
 	//Select alternate functions for USART3
 	GPIOC->AFR[1] &= ~(1 << 15);
 	GPIOC->AFR[1] &= ~(1 << 14);
@@ -122,16 +122,78 @@ int main(void)
 	USART3->CR1 |= (1 << 3);
 	USART3->CR1 |= (1 << 2);
 	USART3->CR1 |= (1 << 0);
-	USART3->BRR = HAL_RCC_GetHCLKFreq() / 9600; // get baud rate of 115200
+	USART3->BRR |= HAL_RCC_GetHCLKFreq() / 9600; // get baud rate of 115200
+	//Setup LEDS
 	
-	int x = 0;
-	char  string[] = {'a', 'b', 'c', 'd', 'e'};
-  while (1)
-  {
-		x++;
-		if(x == 150000)
-			Transmit_String(string);
-  } 
+	//General Purpose Output Mode 
+	GPIOC->MODER &= ~(1 << 19);	
+	GPIOC->MODER |= (1 << 18);
+	GPIOC->MODER &= ~(1 << 17);
+	GPIOC->MODER |= (1 << 16);
+	GPIOC->MODER &= ~(1 << 15);
+	GPIOC->MODER |= (1 << 14);	
+	GPIOC->MODER &= ~(1 << 13);
+	GPIOC->MODER |= (1 << 12);
+	//Set LEDS to Push-Pull
+	GPIOC->OTYPER &= ~(1 << 9);
+	GPIOC->OTYPER &= ~(1 << 8);
+	GPIOC->OTYPER &= ~(1 << 7);
+	GPIOC->OTYPER &= ~(1 << 6);
+	
+	//Set LEDS to LowSpeed 
+	GPIOC->OSPEEDR &= ~(1 << 18);
+	GPIOC->OSPEEDR &= ~(1 << 16);
+	GPIOC->OSPEEDR &= ~(1 << 14);
+	GPIOC->OSPEEDR &= ~(1 << 12);
+	
+	//Set LEDS to No pull up/down Resistor
+	GPIOC->PUPDR &= ~(1 << 19);
+	GPIOC->PUPDR &= ~(1 << 18);
+	GPIOC->PUPDR &= ~(1 << 17);
+	GPIOC->PUPDR &= ~(1 << 16);
+	GPIOC->PUPDR &= ~(1 << 15);
+	GPIOC->PUPDR &= ~(1 << 14);
+	GPIOC->PUPDR &= ~(1 << 13);
+	GPIOC->PUPDR &= ~(1 << 12);
+	GPIOC->ODR &= ~(1 << 6);
+	GPIOC->ODR &= ~(1 << 7);
+	GPIOC->ODR &= ~(1 << 8);
+	GPIOC->ODR &= ~(1 << 9);
+	//Test Transmit Strings 
+//	int x = 0;
+//	char  string[] = {'a', 'b', 'c', 'd', 'e'};
+//  while (1)
+//  {
+//		x++;
+//		if(x == 150000)
+//			Transmit_String(string);
+//  } 
+
+	while(1)
+	{
+		char errorMsg[] = {'e', 'r', 'r', 'o', 'r', NULL};
+		//if we data is read to be read 
+		if((USART3->ISR & USART_ISR_RXNE) != 0)
+		{
+			char value = USART3->RDR & 0xFF;
+			switch(value){
+				case 'r':
+					GPIOC->ODR ^= (1 << 6);
+					break;
+				case 'b':
+					GPIOC->ODR ^= (1 << 7);
+					break;
+				case 'g':
+					GPIOC->ODR ^= (1 << 9);
+					break;
+				case 'o':
+					GPIOC->ODR ^= (1 << 8);
+					break;
+				default:
+					Transmit_String(errorMsg);
+				}		
+		}
+	}
 }
 
 /**
