@@ -53,7 +53,38 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void Transmit_Character(char value)
+{
+	while (1)
+  {
+		unsigned int status = USART3->ISR;
+		status &= (0x0040); //check transmission end flag 
+		if(status != 0) 	
+		{
+			USART3->TDR = value;
+			break;
+		}
+  }
+}
 
+void Transmit_String(char* string)
+{
+	int i = 0;
+	while(1)
+	{
+		if(string[i] == NULL) 
+		{
+			break;
+		}
+		else 
+		{
+			Transmit_Character(string[i]);
+			i++;
+		}
+			
+	}
+		
+}
 /* USER CODE END 0 */
 
 /**
@@ -62,119 +93,45 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-	
-  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
 	
+	//Setup RCC clocks
 	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+  RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
 	
-	//setup timer 2 4 hz
-	TIM2->PSC = 7999;
-	TIM2->ARR = 250;
-	TIM2->DIER |= (1 << 0);
+	GPIOC->MODER |= (1 << 23);
+	GPIOC->MODER &= ~(1 << 22);
+	GPIOC->MODER |= (1 << 21);
+	GPIOC->MODER &= ~(1 << 20);
+	//Select alternate functions for USART3
+	GPIOC->AFR[1] &= ~(1 << 15);
+	GPIOC->AFR[1] &= ~(1 << 14);
+	GPIOC->AFR[1] &= ~(1 << 13);
+	GPIOC->AFR[1] |= (1 << 12);
+	GPIOC->AFR[1] &= ~(1 << 11);	
+	GPIOC->AFR[1] &= ~(1 << 10);
+	GPIOC->AFR[1] &= ~(1 << 9);
+	GPIOC->AFR[1] |= (1 << 8);
 	
-	//setup timer 3 800 hz
-	TIM3->PSC = 7;
-	TIM3->ARR = 1250;
+	//Enable USART 3 
+	USART3->CR1 |= (1 << 3);
+	USART3->CR1 |= (1 << 2);
+	USART3->CR1 |= (1 << 0);
+	USART3->BRR = HAL_RCC_GetHCLKFreq() / 9600; // get baud rate of 115200
 	
-	//Configure to output on channel 1 and 2
-	TIM3->CCMR1 &= ~(1 << 9);
-	TIM3->CCMR1 &= ~(1 << 8);
-	TIM3->CCMR1 &= ~(1 << 1);
-	TIM3->CCMR1 &= ~(1 << 0);
-	
-	//Configure channel 1 to PWM mode 2 
-	TIM3->CCMR1 |= (1 << 6);
-	TIM3->CCMR1 |= (1 << 5);
-	TIM3->CCMR1 |= (1 << 4);
-	
-	//configure channel 2 to PWM mode 1 
-	TIM3->CCMR1 |= (1 << 14);
-	TIM3->CCMR1 |= (1 << 13);
-	TIM3->CCMR1 &= ~(1 << 12);
-	
-	//Enable output preload enable for both channels 
-	TIM3->CCMR1 |= (1 << 11);
-	TIM3->CCMR1 |= (1 << 3);
-	
-	//Enable output channels in CCER
-	TIM3->CCER |= (1 << 0);
-	TIM3->CCER |= (1 << 4);
-	
-	//Set AAR to 20% 
-	TIM3->CCR1 = 700;
-	TIM3->CCR2 = 700;
-	
-	//Set up alternative function on both PC6 and 7
-	GPIOC->AFR[0] &= ~(1 << 31);
-	GPIOC->AFR[0] &= ~(1 << 30);
-	GPIOC->AFR[0] &= ~(1 << 29);
-	GPIOC->AFR[0] &= ~(1 << 28);
-	GPIOC->AFR[0] &= ~(1 << 27);
-	GPIOC->AFR[0] &= ~(1 << 26);
-	GPIOC->AFR[0] &= ~(1 << 25);
-	GPIOC->AFR[0] &= ~(1 << 24);
-	
-	TIM2->CR1 |= TIM_CR1_CEN;
-
-	TIM3->CR1 |= TIM_CR1_CEN;
-	NVIC_EnableIRQ(TIM2_IRQn); 
-	
-	//Set pins 8 and 9 to General Purpose Output mode
-	GPIOC->MODER &= ~(1 << 19);	
-	GPIOC->MODER |= (1 << 18);
-	GPIOC->MODER &= ~(1 << 17);
-	GPIOC->MODER |= (1 << 16);
-	GPIOC->MODER |= (1 << 15);
-	GPIOC->MODER &= ~(1 << 14);	
-	GPIOC->MODER |= (1 << 13);
-	GPIOC->MODER &= ~(1 << 12);
-	
-	//Set pins 8 and 9 to Push-Pull
-	GPIOC->OTYPER &= ~(1 << 9);
-	GPIOC->OTYPER &= ~(1 << 8);
-	GPIOC->OTYPER &= ~(1 << 7);
-	GPIOC->OTYPER &= ~(1 << 6);
-	
-	//Set pins 8 and 9 to LowSpeed 
-	GPIOC->OSPEEDR &= ~(1 << 18);
-	GPIOC->OSPEEDR &= ~(1 << 16);
-	GPIOC->OSPEEDR &= ~(1 << 14);
-	GPIOC->OSPEEDR &= ~(1 << 12);
-	
-	//Set Pins 8 and 9 to No pull up/down Resistor
-	GPIOC->PUPDR &= ~(1 << 19);
-	GPIOC->PUPDR &= ~(1 << 18);
-	GPIOC->PUPDR &= ~(1 << 17);
-	GPIOC->PUPDR &= ~(1 << 16);
-	GPIOC->PUPDR &= ~(1 << 15);
-	GPIOC->PUPDR &= ~(1 << 14);
-	GPIOC->PUPDR &= ~(1 << 13);
-	GPIOC->PUPDR &= ~(1 << 12);
-	
-	//Set Green to high
-	GPIOC->ODR |= (1 << 9);
-	
+	int x = 0;
+	char  string[] = {'a', 'b', 'c', 'd', 'e'};
   while (1)
   {
-  }
-  /* USER CODE END 3 */
+		x++;
+		if(x == 150000)
+			Transmit_String(string);
+  } 
 }
 
 /**
