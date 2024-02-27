@@ -130,7 +130,7 @@ int main(void)
 	USART3->CR1 |= (1 << 3); //Transmitter Enable
 	USART3->CR1 |= (1 << 2); //Receiver Enable
 	USART3->CR1 |= (1 << 0); // USART Enable 
-	USART3->BRR |= HAL_RCC_GetHCLKFreq() / 9600; // get baud rate of 115200
+	USART3->BRR |= HAL_RCC_GetHCLKFreq() / 115200; // get baud rate of 115200
 	//Setup LEDS
 	
 	//General Purpose Output Mode for PC6-9 LEDS
