@@ -453,7 +453,7 @@ int main(void)
 		GPIOC->ODR &= ~(1 << 8); // orange
 		GPIOC->ODR |= (1 << 9); // green
 	}
-	if ( X < -100)
+	else if ( X < -100)
 	{
 		GPIOC->ODR |= (1 << 8); // orange
 		GPIOC->ODR &= ~(1 << 9); // green
@@ -464,7 +464,7 @@ int main(void)
 		GPIOC->ODR |= (1 << 6); // red
 		GPIOC->ODR &= ~(1 << 7); // blue
 	}
-	 if ( Y < -100)
+	 else if ( Y < -100)
 	{
 		GPIOC->ODR &= ~(1 << 6); // red
 		GPIOC->ODR |= (1 << 7); // blue
