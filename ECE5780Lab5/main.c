@@ -93,28 +93,40 @@ int main(void)
 	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
 	
 	//-----------------Setup LED----------------
+	//Set PC6-9 to General Purpose Output Mode
+	GPIOC->MODER &= ~(1 << 19);	
+	GPIOC->MODER |= (1 << 18);
+	GPIOC->MODER &= ~(1 << 17);
+	GPIOC->MODER |= (1 << 16);
 	GPIOC->MODER &= ~(1 << 15);	
 	GPIOC->MODER |= (1 << 14);
 	GPIOC->MODER &= ~(1 << 13);
 	GPIOC->MODER |= (1 << 12);
 	
-	//Set pins 8 and 9 to Push-Pull
+	//Set PC6-9 to Push-Pull
+	GPIOC->OTYPER &= ~(1 << 9);
+	GPIOC->OTYPER &= ~(1 << 8);
 	GPIOC->OTYPER &= ~(1 << 7);
 	GPIOC->OTYPER &= ~(1 << 6);
-	//Set pins 8 and 9 to LowSpeed 
+	//Set PC6-9 to LowSpeed 
+	GPIOC->OSPEEDR &= ~(1 << 18);
+	GPIOC->OSPEEDR &= ~(1 << 16);
 	GPIOC->OSPEEDR &= ~(1 << 14);
 	GPIOC->OSPEEDR &= ~(1 << 12);
-	//Set Pins 8 and 9 to No pull up/down Resistor
+	//Set PC6-9 to No pull up/down Resistor
+	GPIOC->PUPDR &= ~(1 << 19);
+	GPIOC->PUPDR &= ~(1 << 18);
+	GPIOC->PUPDR &= ~(1 << 17);
+	GPIOC->PUPDR &= ~(1 << 16);
 	GPIOC->PUPDR &= ~(1 << 15);
 	GPIOC->PUPDR &= ~(1 << 14);
 	GPIOC->PUPDR &= ~(1 << 13);
 	GPIOC->PUPDR &= ~(1 << 12);
-	//Set pin 6 to high
+	//Set LEDS to low
 	GPIOC->ODR &= ~(1 << 6); // red
-	//set pin 7 to low
 	GPIOC->ODR &= ~(1 << 7); // blue
-	
-	//-----------------Setup LED----------------
+	GPIOC->ODR &= ~(1 << 8); // orange
+	GPIOC->ODR &= ~(1 << 9); // green
 	
 	
 	//-----------------Setup PB11, PB13, PB14, PC0----------------
@@ -154,9 +166,6 @@ int main(void)
 	GPIOC->ODR |= (1 << 0);
 	GPIOB->ODR |= (1 << 14);
 	
-	//-----------------Setup PB11, PB13, PB14, PC0----------------
-	
-	
 	//-----------------Set I2C2 TimingRgst to 100k----------------
 	
 	I2C2->TIMINGR |= (0x1  << 28);  //PRESC = 1
@@ -165,18 +174,84 @@ int main(void)
 	I2C2->TIMINGR |= (0x2  << 16); //SDADEL = 0x2
 	I2C2->TIMINGR |= (0x4  << 20); //SCLDEL = 0x4
 	
-	//-----------------Set I2C2 TimingRgst to 100k----------------
-	
-	
+		I2C2->CR1 |= (1 << 0); 
+	//-----------------I2C code start------------------------------ 
 	//Enable I2C2 periphial using CR1 PE bit 
-	I2C2->CR1 |= (1 << 0); 
+
 	
+//	//	1. Set the slave address in the SADD[7:1] bit field.
+//	I2C2->CR2 |= (0x69 << 1);
+//	//	2. Set the number of data byte to be transmitted in the NBYTES[7:0] bit field.
+//	I2C2->CR2 |= (1 << 16);	
+//	//	4. Do not set the AUTOEND bit,x this lab requires software start/stop operation.
+//	I2C2->CR2 &=~(1<<10); 
+//	//	5. Setting the START bit to begin the address frame
+//	I2C2->CR2 |= (1 << 13);
+//	
+//	//Wait for TXIS 
+//	while(1)
+//	{
+//		if((I2C2->ISR & I2C_ISR_TXIS))
+//		{
+//			break;
+//		}
+//	}
+//	
+//	I2C2->TXDR = 0x0F;
+//	
+//	//Wait for transfer Complete
+//	while(1)
+//	{
+//		if((I2C2->ISR & I2C_ISR_TC)){ 
+//				
+//			break;
+//		}
+//	}
+
+//	//	1. Set the slave address in the SADD[7:1] bit field.
+//	I2C2->CR2 |= (0x69 << 1);
+//	//	2. Set the number of data byteto be transmitted in the NBYTES[7:0] bit field.
+//	I2C2->CR2 |= (0x01 << 16);	
+//	//	3. Configure the RD_WRN to indicate a read/write operation.
+//	I2C2->CR2 |= (1 << 10);	
+//	//	4. Do not set the AUTOEND bit, this lab requires software start/stop operation.
+//	
+//	//	5. Setting the START bit to begin the address frame
+//	I2C2->CR2 |= (1 << 13);
+//	
+//	//Wait for Read
+//		while(1)
+//	{
+//		if((I2C2->ISR & I2C_ISR_RXNE))
+//		{
+//			break;
+//		}
+//	}
+//	//Wait for Transfer Complete
+//		while(1)
+//	{
+//		if((I2C2->ISR & I2C_ISR_TC))
+//		{
+//			break;
+//		}
+//	}
+//	//Set blue Led if Read Correctly 
+//	if(I2C2->RXDR == 0xD3) GPIOC->ODR |= (1 << 7); // blue
+//	
+//	//Stop The I2C
+//	I2C2->CR2 |= (1 << 14);
+//	
+
+	//---------------------Write 0xB to control Register of GyroScope -----------------
 	//	1. Set the slave address in the SADD[7:1] bit field.
 	I2C2->CR2 |= (0x69 << 1);
 	//	2. Set the number of data byte to be transmitted in the NBYTES[7:0] bit field.
-	I2C2->CR2 |= (1 << 16);	
-	//	4. Do not set the AUTOEND bit,x this lab requires software start/stop operation.
-	I2C2->CR2 &=~(1<<10); 
+	I2C2->CR2 |= (1 << 17); 
+	I2C2->CR2 &= ~(1 << 16); 
+	
+	//	3. Configure the RD_WRN to indicate a read/write operation.
+	I2C2->CR2 &=~(1<<10); //Write 
+	
 	//	5. Setting the START bit to begin the address frame
 	I2C2->CR2 |= (1 << 13);
 	
@@ -188,8 +263,62 @@ int main(void)
 			break;
 		}
 	}
+	//Write Register Address 
+	I2C2->TXDR = 0x20;
+
+	while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_TXIS))
+		{
+			break;
+		}
+	}
+	//Write Value into register 
+	I2C2->TXDR = 0xB;
+	//Wait for transfer Complete
+	while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_TC)){ 
+				
+			break;
+		}
+	}
+
+	//Stop
+	I2C2->CR2 |= (1 << 14);
 	
-	I2C2->TXDR = 0x0F;
+	
+	//While Loop 
+	int8_t xLow;
+	int8_t	xHigh;
+	int8_t yLow;
+	int8_t yHigh; 
+	int16_t X;
+	int16_t Y;
+	while(1){
+		//Create 100 ms delay
+	HAL_Delay(100);
+	//----------------------Read X---------------------------------------------------------
+	
+	//1 Bytes 
+	I2C2->CR2 |= (1 << 16);	
+	I2C2->CR2 &= ~(1 << 17);
+		
+	I2C2->CR2 &= ~(1 << 10);	//Write
+
+	//	5. Setting the START bit to begin the address frame
+	I2C2->CR2 |= (1 << 13);
+	
+	//Wait for TXIS 
+	while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_TXIS))
+		{
+			break;
+		}
+	}
+	//Write Register to read both x low and x high at same time
+	I2C2->TXDR = 0xA8;
 	
 	//Wait for transfer Complete
 	while(1)
@@ -200,14 +329,12 @@ int main(void)
 		}
 	}
 
-	//	1. Set the slave address in the SADD[7:1] bit field.
-	I2C2->CR2 |= (0x69 << 1);
-	//	2. Set the number of data byteto be transmitted in the NBYTES[7:0] bit field.
-	I2C2->CR2 |= (0x01 << 16);	
-	//	3. Configure the RD_WRN to indicate a read/write operation.
-	I2C2->CR2 |= (1 << 10);	
-	//	4. Do not set the AUTOEND bit, this lab requires software start/stop operation.
-	//	5. Setting the START bit to begin the address frame
+	//2 Data Bits
+	I2C2->CR2 |= (1 << 17);	
+	I2C2->CR2 &= ~(1 << 16);
+	//Read Data
+	I2C2->CR2 |= (1 << 10);	 
+	//Start
 	I2C2->CR2 |= (1 << 13);
 	
 	//Wait for Read
@@ -218,6 +345,18 @@ int main(void)
 			break;
 		}
 	}
+	//store xLow
+	xLow = I2C2->RXDR;
+	while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_RXNE))
+		{
+			break;
+		}
+	}
+	//Store xHigh 
+	xHigh = I2C2->RXDR;
+	
 	//Wait for Transfer Complete
 		while(1)
 	{
@@ -226,11 +365,111 @@ int main(void)
 			break;
 		}
 	}
-	//Set blue Led if Read Correctly 
-	if(I2C2->RXDR == 0xD3) GPIOC->ODR |= (1 << 7); // blue
 	
-	//Stop The I2C
+	//Stop
 	I2C2->CR2 |= (1 << 14);
+	//----------------------Read Y---------------------------------------------------------
+
+	//	2. Set the number of data byte to be transmitted in the NBYTES[7:0] bit field.
+	I2C2->CR2 |= (1 << 16);	
+	I2C2->CR2 &= ~(1<<17);
+	//	3. Configure the RD_WRN to indicate a read/write operation.
+	I2C2->CR2 &= ~(1 << 10);	//Write
+	//	4. Do not set the AUTOEND bit,x this lab requires software start/stop operation.
+	//	5. Setting the START bit to begin the address frame
+	I2C2->CR2 |= (1 << 13);
+	
+	//Wait for TXIS 
+	while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_TXIS))
+		{
+			break;
+		}
+	}
+	//Write Register to read both y low and y high at same time
+	I2C2->TXDR = 0xAA;
+	
+	//Wait for transfer Complete
+	while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_TC)){ 
+				
+			break;
+		}
+	}
+
+	//2 Data Bits
+	I2C2->CR2 |= (1 << 17);	
+	I2C2->CR2 &= ~(1 << 16);
+	//Read Data
+	I2C2->CR2 |= (1 << 10);	 
+	//Start
+	I2C2->CR2 |= (1 << 13);
+	
+	//Wait for Read
+		while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_RXNE))
+		{
+			break;
+		}
+	}
+	//store yLow
+	yLow = I2C2->RXDR;
+	while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_RXNE))
+		{
+			break;
+		}
+	}
+	//Store yHigh 
+	yHigh = I2C2->RXDR;
+	
+	//Wait for Transfer Complete
+		while(1)
+	{
+		if((I2C2->ISR & I2C_ISR_TC))
+		{
+			break;
+		}
+	}
+	
+	//Stop
+	I2C2->CR2 |= (1 << 14);
+	
+	
+	//----------------------Output LED based on X and Y ----------------------------------
+	
+	//Combine the low and high values
+	X = (int16_t )(xLow | (xHigh << 8));
+	Y =(int16_t )( yLow | (yHigh << 8));
+
+	
+	//Check if positive or negative
+	if( X > 100)
+	{
+		GPIOC->ODR &= ~(1 << 8); // orange
+		GPIOC->ODR |= (1 << 9); // green
+	}
+	if ( X < -100)
+	{
+		GPIOC->ODR |= (1 << 8); // orange
+		GPIOC->ODR &= ~(1 << 9); // green
+	}
+	
+		if( Y > 100)
+	{
+		GPIOC->ODR |= (1 << 6); // red
+		GPIOC->ODR &= ~(1 << 7); // blue
+	}
+	 if ( Y < -100)
+	{
+		GPIOC->ODR &= ~(1 << 6); // red
+		GPIOC->ODR |= (1 << 7); // blue
+	}
+	}
 	}
 
 /**
